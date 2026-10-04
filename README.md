@@ -66,9 +66,12 @@ Each team gets its own `hub_id`: its own durable inbox, agents and budget.
 A team's `guidance_file` (relative to the config; `platform-guidance.md` is
 an example: `agent/<topic>` branches, no `__pycache__`/`*.pyc` or other build
 artefacts in commits) holds its house rules. The service passes it to the
-team's hub (`--hub-guidance-file`) and appends it to every task prompt it
-spawns, because no model drives this hub and the agents are the ones who must
-follow the rules. `POST /approvals` returns that full `prompt`; the owner
+team's hub (`--hub-guidance-file`) and appends it to the prompt of every task
+that names a repository (`repo`, or `constraints.workspace.repo`), because no
+model drives this hub and the agents are the ones who must follow the rules.
+The rules are about repository work, so a task without a repository (a
+production restart) gets only its own prompt, and its owner signs only that.
+`POST /approvals` returns the full `prompt` the agent will get; the owner
 signs exactly it.
 Run it against nfltr.xyz (the key from `NFLTR_API_KEY` or the saved
 `nfltr config add-api-key`):
@@ -111,7 +114,7 @@ Or open http://localhost:8080/, paste your token, and watch tasks finish.
 | `POST /tasks/{id}/messages` | `send_message`: steer a running agent or continue a finished one |
 | `POST /tasks/{id}/stop` | `stop_agent` |
 | `GET /machines` | `list_nodes`: machines, labels, free slots |
-| `POST /approvals` | `{machine, prompt}` → `request_approval`: the digest and command the machine's owner runs |
+| `POST /approvals` | `{machine, prompt, repo?}` → `request_approval`: the digest and command the machine's owner runs |
 | `POST /hooks/{team}/{name}` | A webhook (bearer secret from the config) becomes a task: the hook's prompt plus the event as data. `Idempotency-Key` deduplicates |
 | `POST /github` | GitHub's webhook: `/agent` comments and failed CI runs (below) |
 
@@ -177,6 +180,15 @@ keys. So:
 
   `printf` is a shell builtin, so the token is in no process's argv.
   `store` writes `~/.git-credentials` with mode 0600.
+- Choose who the agents' commits name. The node gives its agents the
+  identity its OS user has, read once at join: `GIT_AUTHOR_*` and
+  `GIT_COMMITTER_*` in its environment, else that user's
+  `git config --global user.name` and `user.email`. With neither it sets
+  none, and an agent that commits picks a name itself. `join-node.sh` takes
+  `GIT_NAME` and `GIT_EMAIL` (both or neither), for example a team bot
+  account (`GIT_NAME=payments-bot GIT_EMAIL=payments-bot@acme.example`),
+  and passes them to the node as git's own variables; omitted, it sets
+  nothing.
 - Use https repository URLs in `--allow-repo` and in the tasks' `repo`
   (`https://github.com/acme/payments-api`). The node's agents run as its OS
   user and can read that user's credential store. Scope the token to the one
@@ -196,7 +208,8 @@ For a task that must change production on `prod-1`:
 
 1. `POST /approvals {"machine":"prod-1","prompt":"<exact prompt>"}` returns
    `prompt_sha256`, the owner's command and `prompt`: the exact text the
-   agent will get (your prompt plus the team's house rules).
+   agent will get (your prompt; with `"repo"`, as the task will name it,
+   plus the team's house rules).
 2. The owner saves that `prompt`, reads it, and signs on their own machine:
    `nfltr orch hub approve --key-file ~/.config/nfltr/approval.key --node prod-1 --prompt-file fix.txt --ttl 15m --expect-digest <prompt_sha256>`.
 3. `POST /tasks {"prompt":"<same prompt>","machine":"prod-1","approval":"nfltr-approval-v1...."}`.
@@ -216,7 +229,7 @@ these into your repositories and the admin's tooling:
 |---|---|---|
 | `.mcp.json` | developers (repo root) | Gives Claude Code the hub tools on nfltr.xyz: `nfltr mcp --toolset hub --hub-id dev-${USER}.payments-api --hub-guidance-file .nfltr/guidance.md`. The key comes from the developer's own `nfltr config add-api-key`, never the file |
 | `guidance.md` | developers (as `.nfltr/guidance.md`) | The organisation's machines, what each is for and the house rules, carried verbatim to the hub model (at most 4 KiB) |
-| `join-node.sh` | the admin, on each machine | `TEAM=payments NAME=build-1 ./join-node.sh` (or `KIND=prod APPROVAL_KEY=...`): one way to join every machine, with team labels, `--allow-repo`, `--serve-hubs platform-<team>,dev-*`, on staging `staging-policy.json`, and on prod `--require-pin`, `prod-policy.json` and the owner's approval key |
+| `join-node.sh` | the admin, on each machine | `TEAM=payments NAME=build-1 ./join-node.sh` (or `KIND=prod APPROVAL_KEY=...`; optional `GIT_NAME`/`GIT_EMAIL`, the agents' commit identity): one way to join every machine, with team labels, `--allow-repo`, `--serve-hubs platform-<team>,dev-*`, on staging `staging-policy.json`, and on prod `--require-pin`, `prod-policy.json` and the owner's approval key |
 | `prod-policy.json` | the admin | Tool policy for prod: `kubectl` writes only with the owner's signed grant (`unless_approved`), never `git push` |
 | `staging-policy.json` | the admin | Read-only tool policy for staging (`KIND=staging`): denies `kubectl` writes, service and container control, file/process/package changes, pushes and Claude's file-edit tools. It has no `unless_approved` rule, so it joins without `--approval-public-key` |
 

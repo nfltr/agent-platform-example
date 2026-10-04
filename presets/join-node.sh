@@ -4,6 +4,7 @@
 #
 #   TEAM=payments NAME=build-1 ./join-node.sh [extra nfltr node join flags]
 #   TEAM=payments NAME=prod-1 KIND=prod APPROVAL_KEY=nfltr-approval-pub-v1:... ./join-node.sh
+#   GIT_NAME=payments-bot GIT_EMAIL=payments-bot@acme.example TEAM=payments NAME=build-1 ./join-node.sh
 #
 # Needs: nfltr (curl -fsSL https://nfltr.xyz/install.sh | sh), Claude Code,
 # the node's nfltr key saved once (`nfltr config add-api-key`, prompts; never
@@ -17,6 +18,15 @@ KIND="${KIND:-build}"          # build | staging | prod
 SLOTS="${SLOTS:-2}"            # agents at once on this machine
 REPOS="${REPOS:-github.com/acme/${TEAM}-*}"  # repositories agents may clone and push
 HERE="$(cd "$(dirname "$0")" && pwd)"
+
+# Who the agents' commits name: optional, the admin's choice (a team bot, the
+# machine). Given to the node as git's own GIT_AUTHOR_*/GIT_COMMITTER_*, which
+# it passes to its agents. Omitted: the node user's git config user.name and
+# user.email if set, else no identity (the node invents none).
+if [[ -n "${GIT_NAME:-}${GIT_EMAIL:-}" ]]; then
+  : "${GIT_NAME:?GIT_NAME and GIT_EMAIL go together}" "${GIT_EMAIL:?GIT_NAME and GIT_EMAIL go together}"
+  export GIT_AUTHOR_NAME="${GIT_NAME}" GIT_AUTHOR_EMAIL="${GIT_EMAIL}" GIT_COMMITTER_NAME="${GIT_NAME}" GIT_COMMITTER_EMAIL="${GIT_EMAIL}"
+fi
 
 # Which hubs this machine serves: the team's platform hub and every
 # developer's own hub (a trailing * is a prefix). Scoping, not authentication.

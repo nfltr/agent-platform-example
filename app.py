@@ -32,15 +32,18 @@ CONFIG = json.loads(CONFIG_PATH.read_text())
 TEAMS = CONFIG["teams"]
 FINAL = ("completed", "failed", "cancelled")
 # A team's house rules (guidance_file, relative to the config): given to its hub
-# (--hub-guidance-file) and appended to every task prompt the service spawns,
-# since no model runs this hub and the agents are who must follow them.
+# (--hub-guidance-file) and appended to the prompt of every task that names a
+# repository, since no model runs this hub and the agents are who must follow
+# them. They are about repository work (branches, commits, test scope), so a
+# task without a repository (a production restart) gets only its own prompt.
 GUIDANCE = {team: CONFIG_PATH.parent / t["guidance_file"] for team, t in TEAMS.items() if t.get("guidance_file")}
 HOUSE_RULES = {team: p.read_text().strip() for team, p in GUIDANCE.items()}
 
 
-def with_house_rules(team, prompt):
-    """The prompt an agent gets: the task, then the team's house rules. /approvals signs this too."""
-    rules = HOUSE_RULES.get(team)
+def with_house_rules(team, prompt, constraints):
+    """The prompt an agent gets: the task, then the team's house rules if it names a
+    repository (constraints.workspace.repo). /approvals signs this too."""
+    rules = HOUSE_RULES.get(team) if (constraints.get("workspace") or {}).get("repo") else None
     return prompt + "\n\nHouse rules of this team (from the platform's operator):\n" + rules if rules else prompt
 
 # ── storage: one SQLite file for tasks, one JSON-lines audit log ──────────
@@ -169,7 +172,7 @@ def constraints_of(t: TaskIn):
 
 
 async def submit(team, user, source, prompt, constraints):
-    hub, prompt = hubs[team], with_house_rules(team, prompt)
+    hub, prompt = hubs[team], with_house_rules(team, prompt, constraints)
     async with hub.lock:
         try:
             a = await hub.call("spawn_agent", {"prompt": prompt, "constraints": constraints})
@@ -271,13 +274,15 @@ async def machines(who=Depends(caller)):
 class ApprovalIn(BaseModel):
     machine: str
     prompt: str = Field(min_length=1)
+    repo: str | None = None  # the task's repo, if it names one (the house rules then apply)
 
 
 @app.post("/approvals")
 async def request_approval(a: ApprovalIn, who=Depends(caller)):
     """The digest and command the machine's owner runs to sign a grant for exactly the prompt the
-    agent will get (`prompt`: the task plus the team's house rules; the owner saves exactly this)."""
-    prompt = with_house_rules(who[0], a.prompt)
+    agent will get (`prompt`: the task, plus the team's house rules when it names a `repo`; the
+    owner saves exactly this)."""
+    prompt = with_house_rules(who[0], a.prompt, {"workspace": {"repo": a.repo}} if a.repo else {})
     return {**await hubs[who[0]].call("request_approval", {"node": a.machine, "prompt": prompt}), "prompt": prompt}
 
 
