@@ -1,0 +1,22 @@
+# The platform service only. Agents run on your machines, joined with
+# `nfltr node join`; this container needs no Claude credentials.
+#   export NFLTR_API_KEY=...        # your nfltr key (or your own relay's)
+#   docker compose up -d --build
+services:
+  platform:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080" # put your TLS proxy / SSO gateway in front
+    environment:
+      NFLTR_API_KEY: ${NFLTR_API_KEY:?set NFLTR_API_KEY}
+      # Your own relay instead of nfltr.xyz (and its certificate pin):
+      NFLTR_SERVER: ${NFLTR_SERVER:-}
+      NFLTR_PROXY_URL: ${NFLTR_PROXY_URL:-}
+      NFLTR_RELAY_CERT_SHA256: ${NFLTR_RELAY_CERT_SHA256:-}
+    volumes:
+      - ./config.json:/config/config.json:ro
+      - ./platform-guidance.md:/config/platform-guidance.md:ro # a team's guidance_file
+      - platform-state:/state # tasks.db, audit.jsonl and the hubs' durable state
+    restart: unless-stopped
+volumes:
+  platform-state:

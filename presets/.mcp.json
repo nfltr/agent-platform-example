@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "nfltr": {
+      "command": "nfltr",
+      "args": [
+        "mcp", "--toolset", "hub",
+        "--hub-id", "dev-${USER}.payments-api",
+        "--hub-guidance-file", ".nfltr/guidance.md"
+      ]
+    }
+  }
+}

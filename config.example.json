@@ -1,0 +1,38 @@
+{
+  "teams": {
+    "payments": {
+      "hub_id": "platform-payments",
+      "budget": {"max_tokens": 5000000, "max_usd": 25},
+      "guidance_file": "platform-guidance.md",
+      "users": {
+        "alice": "<sha256 of alice's token: printf %s \"$TOKEN\" | shasum -a 256>"
+      },
+      "hooks": {
+        "ci-failure": {
+          "secret_sha256": "<sha256 of the hook's secret>",
+          "prompt": "A CI job failed. Find the cause from the log and the repository and say what fix you would make. Change nothing.",
+          "constraints": {"labels": {"team": "payments"}}
+        }
+      }
+    },
+    "search": {
+      "hub_id": "platform-search",
+      "users": {"bob": "<sha256 of bob's token>"}
+    }
+  },
+  "github": {
+    "public_url": "https://agents.acme.example",
+    "webhook_secret_file": "/run/secrets/github-webhook-secret",
+    "token_file": "/run/secrets/github-token",
+    "max_age_seconds": 600,
+    "max_tasks_per_minute": 10,
+    "logins": {"alice-acme": "alice"},
+    "repos": {
+      "acme/payments-api": {
+        "team": "payments",
+        "constraints": {"labels": {"team": "payments"}, "mutates_workspace": true},
+        "ci_prompt": "A CI run failed. Find the cause from the run's log and the repository and say what fix you would make. Change nothing."
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{"pre_tool_use": [
+  {"tool": "Bash", "input_field": "command", "deny_regex": "(?s)(^|[^A-Za-z0-9_.-])k[\\\\'\"]*u[\\\\'\"]*b[\\\\'\"]*e[\\\\'\"]*c[\\\\'\"]*t[\\\\'\"]*l([^A-Za-z0-9_.-].*)?[^A-Za-z0-9_-](apply|create|delete|edit|patch|replace|rollout|scale|set|annotate|label|taint|cordon|uncordon|drain|expose|autoscale|run|exec|cp|debug|attach)([^A-Za-z0-9_-]|$)", "reason": "production writes need the owner's signed approval", "unless_approved": true},
+  {"tool": "Monitor", "input_field": "command", "deny_regex": "(?s)(^|[^A-Za-z0-9_.-])k[\\\\'\"]*u[\\\\'\"]*b[\\\\'\"]*e[\\\\'\"]*c[\\\\'\"]*t[\\\\'\"]*l([^A-Za-z0-9_.-].*)?[^A-Za-z0-9_-](apply|create|delete|edit|patch|replace|rollout|scale|set|annotate|label|taint|cordon|uncordon|drain|expose|autoscale|run|exec|cp|debug|attach)([^A-Za-z0-9_-]|$)", "reason": "production writes need the owner's signed approval", "unless_approved": true},
+  {"tool": "Bash", "input_field": "command", "deny_regex": "(?s)(^|[^A-Za-z0-9_.-])git([^A-Za-z0-9_.-].*)?[^A-Za-z0-9_-]push([^A-Za-z0-9_-]|$)", "reason": "nothing is pushed from the production box"},
+  {"tool": "Monitor", "input_field": "command", "deny_regex": "(?s)(^|[^A-Za-z0-9_.-])git([^A-Za-z0-9_.-].*)?[^A-Za-z0-9_-]push([^A-Za-z0-9_-]|$)", "reason": "nothing is pushed from the production box"}
+]}
