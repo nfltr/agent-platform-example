@@ -1,5 +1,17 @@
 # Agent platform on nfltr (reference example)
 
+**What it is, for whom:** a reference service for teams who want to build their
+own "cloud agent sessions" product on [nfltr](https://nfltr.xyz): it shows how a
+program with no model of its own drives an nfltr hub over MCP. **Status:**
+example code, not a supported product; it needs nfltr v1.0.673 or later.
+**In the nfltr stack:** it uses the `nfltr` and `nfltr-orch` binaries (built
+on [nfltr/relay](https://github.com/nfltr/relay) and
+[nfltr/link](https://github.com/nfltr/link)) against the hosted relay at
+nfltr.xyz. **Docs:** this file and [nfltr.xyz/docs](https://nfltr.xyz/docs).
+**License:** Apache-2.0. **Checks:** this copy has no test suite or `make ci`; it is
+published from the nfltr repository, where `make test-agent-platform-example`
+runs it end to end.
+
 A small web service that gives your teams "cloud agent sessions" on your own
 machines: submit a task over HTTP (or let a webhook submit it), a Claude Code
 agent runs it on one of your machines, and the result, the machine and the
@@ -287,5 +299,4 @@ agent runtime. A real deployment adds them in front of or around this service.
 
 ## Licence
 
-This example is licensed under Apache-2.0 (see `LICENSE` where it is
-published). nfltr itself is a separate product with its own terms.
+This example is licensed under Apache-2.0 (see [LICENSE](LICENSE)). nfltr itself is a separate product with its own terms.
