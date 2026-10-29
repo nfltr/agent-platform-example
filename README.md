@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.svg" width="96" alt="nfltr"></p>
+
 # Agent platform on nfltr (reference example)
 
 **What it is, for whom:** a reference service for teams who want to build their
